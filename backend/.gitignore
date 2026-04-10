@@ -1,5 +1,13 @@
-# Firebase service account key file
-firebase-key.json
-
-# Environment variables file
+# Environment variables
 .env
+
+# Flask SQLite dev instance folder
+instance/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+.venv/

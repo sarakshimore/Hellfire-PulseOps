@@ -5,8 +5,13 @@ numpy
 scikit-learn
 prophet
 joblib
-firebase-admin
 google-genai
 gunicorn
 python-dotenv
 ortools
+boto3
+Flask-SQLAlchemy
+psycopg2-binary
+PyJWT
+werkzeug
+cryptography
