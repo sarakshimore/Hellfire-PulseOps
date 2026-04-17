@@ -28,8 +28,7 @@ import {
 } from "@/components/ui/sheet";
 import { toast } from "sonner";
 
-import { auth } from "@/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import apiClient from "@/apiClient";
 import LandingPage from "@/pages/Landing";
 import PatientFlow from "@/pages/PatientFlow";
 
@@ -38,25 +37,34 @@ const Navbar = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Firebase auth listener
+  // JWT-based auth listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
-    });
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) { setLoading(false); return; }
+      try {
+        const res = await apiClient.get('/auth/me');
+        setUser(res.data);
+      } catch (e) {
+        localStorage.removeItem('token');
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkAuth();
 
-    return () => unsubscribe();
+    const onStorage = () => checkAuth();
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      toast.success("Logged out successfully");
-      navigate("/login");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to logout");
-    }
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+    window.dispatchEvent(new Event('storage'));
+    toast.success("Logged out successfully");
+    navigate("/login");
   };
 
   return (
@@ -98,7 +106,7 @@ const Navbar = () => {
                 <DropdownMenuLabel>
                   Logged in as
                   <div className="font-semibold truncate">
-                    {user.displayName || user.email}
+                    {user.name || user.email}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />

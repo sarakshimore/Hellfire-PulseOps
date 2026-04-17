@@ -23,6 +23,13 @@ class Hospital(db.Model):
     name = db.Column(db.String(200), nullable=False)
     address = db.Column(db.String(300))
     phone = db.Column(db.String(50))
+    city = db.Column(db.String(100))
+    state = db.Column(db.String(100))
+    pincode = db.Column(db.String(20))
+    number_of_beds = db.Column(db.Integer, default=0)
+    icu_beds = db.Column(db.Integer, default=0)
+    emergency_beds = db.Column(db.Integer, default=0)
+    operating_rooms = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     surgeons = db.relationship('Surgeon', backref='hospital', lazy=True)

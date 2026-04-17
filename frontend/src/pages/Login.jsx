@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/firebase";
+import apiClient from "@/apiClient";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,17 +28,17 @@ const Login = () => {
   const handleLogin = async () => {
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(
-        auth,
-        input.email,
-        input.password
-      );
+      const response = await apiClient.post('/auth/login', {
+        email: input.email,
+        password: input.password
+      });
+      localStorage.setItem('token', response.data.token);
 
       toast.success("Login successful");
       navigate("/dashboard");
     } catch (error) {
       console.error(error);
-      toast.error(error.message || "Login failed");
+      toast.error(error.response?.data?.message || error.message || "Login failed");
     } finally {
       setLoading(false);
     }

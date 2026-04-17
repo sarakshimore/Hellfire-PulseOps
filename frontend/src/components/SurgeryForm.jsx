@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { PlusCircle } from "lucide-react";
-import { collection, addDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
-import { db } from "@/firebase";
+import apiClient from "@/apiClient";
 import { toast } from "sonner";
 import { useHospital } from "@/context/HospitalContext";
 
@@ -22,27 +21,16 @@ const SurgeryForm = () => {
   // Fetch surgeons
   useEffect(() => {
     if (!hospital?.id) return;
-
-    const ref = collection(db, "hospitals", hospital.id, "surgeons");
-
-    const unsub = onSnapshot(ref, (snap) => {
-      const list = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      }));
-
+    apiClient.get(`/hospitals/${hospital.id}/surgeons`).then((res) => {
+      const list = res.data;
       setSurgeons(list);
-
-      // auto select first surgeon if empty
       if (!formData.surgeon && list.length > 0) {
         setFormData((prev) => ({
           ...prev,
-          surgeon: `${list[0].name} (${list[0].department})`,
+          surgeon: list[0].id,
         }));
       }
-    });
-
-    return () => unsub();
+    }).catch(console.error);
   }, [hospital?.id]);
 
   const handleChange = (e) => {
@@ -58,15 +46,13 @@ const SurgeryForm = () => {
       return;
     }
 
-    await addDoc(collection(db, "hospitals", hospital.id, "surgery_requests"), {
-      patient_name: formData.patientName,
-      surgeon: formData.surgeon,
-      duration_minutes: Number(formData.duration),
-      scheduled_date: formData.scheduledDate,
-      scheduled_start_time: formData.scheduledTime,
+    await apiClient.post(`/hospitals/${hospital.id}/surgery-requests`, {
+      patientName: formData.patientName,
+      surgeonId: formData.surgeon,
+      preferredDate: formData.scheduledDate,
+      surgeryType: "General",
       priority: formData.priority,
       status: "pending",
-      createdAt: serverTimestamp(),
     });
 
     toast.success("Surgery added to queue");
@@ -117,8 +103,8 @@ const SurgeryForm = () => {
             >
               <option value="">Select Surgeon</option>
               {surgeons.map((s) => (
-                <option key={s.id} value={`${s.name} (${s.department})`}>
-                  {s.name} ({s.department})
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.specialization || s.department})
                 </option>
               ))}
             </select>

@@ -1,23 +1,18 @@
 import React from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
-import { doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/firebase";
+import apiClient from "@/apiClient";
 import { toast } from "sonner";
 import { useHospital } from "@/context/HospitalContext";
 
-export default function InventoryTable({ items }) {
+export default function InventoryTable({ items, onRefresh }) {
   const { hospital } = useHospital();
 
   const updateStock = async (itemId, currentStock, delta) => {
     if (!hospital?.id) return;
-
     const next = Math.max(0, Number(currentStock || 0) + delta);
-
     try {
-      await updateDoc(doc(db, "hospitals", hospital.id, "inventory", itemId), {
-        stock: next,
-        updatedAt: serverTimestamp(),
-      });
+      await apiClient.patch(`/hospitals/${hospital.id}/inventory/${itemId}`, { stock: next });
+      if (onRefresh) onRefresh();
     } catch (err) {
       console.error(err);
       toast.error("Failed to update stock");
@@ -26,10 +21,10 @@ export default function InventoryTable({ items }) {
 
   const removeItem = async (itemId) => {
     if (!hospital?.id) return;
-
     try {
-      await deleteDoc(doc(db, "hospitals", hospital.id, "inventory", itemId));
+      await apiClient.delete(`/hospitals/${hospital.id}/inventory/${itemId}`);
       toast.success("Medicine deleted");
+      if (onRefresh) onRefresh();
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete medicine");

@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PackageSearch, AlertTriangle, Boxes, TrendingDown } from "lucide-react";
-import { collection, onSnapshot, query } from "firebase/firestore";
-import { db } from "@/firebase";
+import apiClient from "@/apiClient";
 import { toast } from "sonner";
 
 import { useHospital } from "@/context/HospitalContext";
@@ -19,28 +18,19 @@ export default function Inventory() {
   const [insightsLoading, setInsightsLoading] = useState(false);
 
   // Realtime Inventory Listener
-  useEffect(() => {
-    if (loading) return;
+  const fetchInventory = async () => {
     if (!hospital?.id) return;
+    try {
+      const res = await apiClient.get(`/hospitals/${hospital.id}/inventory`);
+      setItems(res.data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load inventory");
+    }
+  };
 
-    const q = query(collection(db, "hospitals", hospital.id, "inventory"));
-
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const rows = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-        setItems(rows);
-      },
-      (err) => {
-        console.error(err);
-        toast.error("Failed to load inventory");
-      }
-    );
-
-    return () => unsub();
+  useEffect(() => {
+    if (!loading) fetchInventory();
   }, [hospital?.id, loading]);
 
   // KPI calculations
@@ -218,7 +208,7 @@ export default function Inventory() {
                 </div>
               </div>
 
-              <InventoryTable items={items} />
+              <InventoryTable items={items} onRefresh={fetchInventory} />
             </div>
 
             {/* Small Context Cards */}

@@ -8,9 +8,7 @@ import {
   Stethoscope,
 } from "lucide-react";
 
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
-import { db } from "@/firebase";
-
+import apiClient from "@/apiClient";
 import { useHospital } from "@/context/HospitalContext";
 
 const StatCard = ({ title, value, subtext, icon: Icon, badge }) => {
@@ -60,7 +58,7 @@ const SurgeonRow = ({ surgeon }) => {
             {surgeon.name || "Unnamed Surgeon"}
           </p>
           <p className="text-xs text-slate-500 font-medium">
-            {surgeon.department || "Department not set"}
+            {surgeon.specialization || "Department not set"}
           </p>
         </div>
       </div>
@@ -81,28 +79,18 @@ export default function Dashboard() {
   const surgeonCount = surgeons.length;
 
   // Real-time surgeons fetch
-  useEffect(() => {
-    if (loading) return;
+  const fetchSurgeons = async () => {
     if (!hospital?.id) return;
+    try {
+      const res = await apiClient.get(`/hospitals/${hospital.id}/surgeons`);
+      setSurgeons(res.data);
+    } catch (err) {
+      console.error("Surgeons fetch error:", err);
+    }
+  };
 
-    const surgeonsRef = collection(db, "hospitals", hospital.id, "surgeons");
-    const q = query(surgeonsRef, orderBy("name", "asc"));
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const list = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
-        setSurgeons(list);
-      },
-      (error) => {
-        console.error("Surgeons listener error:", error);
-      }
-    );
-
-    return () => unsubscribe();
+  useEffect(() => {
+    if (!loading) fetchSurgeons();
   }, [hospital?.id, loading]);
 
   // Labels (small smart badges)

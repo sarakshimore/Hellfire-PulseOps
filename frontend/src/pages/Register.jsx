@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-
-import { auth, db } from "../firebase";
+import apiClient from "../apiClient";
 import Navbar from "../components/Navbar";
 
 import { Button } from "../components/ui/button";
@@ -41,34 +38,17 @@ export default function Register() {
   const handleRegister = async () => {
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        input.email,
-        input.password
-      );
-
-      const user = userCredential.user;
-
-      await updateProfile(user, {
-        displayName: input.name,
-      });
-
-      // OPTIONAL: Save user data to Firestore
-      /*
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
+      await apiClient.post('/auth/register', {
         name: input.name,
         email: input.email,
-        role: "admin",
-        createdAt: serverTimestamp(),
+        password: input.password
       });
-      */
 
-      toast.success("Registration successful!");
-      navigate("/");
+      toast.success("Registration successful! Please log in.");
+      navigate("/login");
     } catch (error) {
       console.error(error);
-      toast.error(error.message || "Registration failed");
+      toast.error(error.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }

@@ -2,10 +2,43 @@ import time
 import os
 from datetime import datetime, timedelta
 from flask import jsonify
+import boto3
 
 from google import genai
 from google.genai import types
 from google.api_core import exceptions
+
+
+def send_sns_alert(hospital_name: str, insights: list):
+    """
+    Publishes an alert to AWS SNS if urgent restock is needed.
+    """
+    sns_topic_arn = os.getenv("SNS_TOPIC_ARN")
+    if not sns_topic_arn or sns_topic_arn == "your_sns_topic_arn":
+        print(f"[SNS Simulation] URGENT RESTOCK ALERT FOR {hospital_name}:")
+        for insight in insights:
+            print(f" - {insight}")
+        return
+
+    try:
+        sns_client = boto3.client(
+            "sns",
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            aws_session_token=os.getenv("AWS_SESSION_TOKEN"),
+            region_name=os.getenv("AWS_REGION", "us-east-1")
+        )
+        message = f"URGENT RESTOCK ALERT FOR {hospital_name}\n\nInsights:\n"
+        message += "\n".join(insights)
+        
+        sns_client.publish(
+            TopicArn=sns_topic_arn,
+            Message=message,
+            Subject=f"Urgent Restock Alert: {hospital_name}"
+        )
+        print(f"SNS alert sent successfully for {hospital_name}.")
+    except Exception as e:
+        print(f"Failed to send SNS alert: {e}")
 
 
 def _rule_based_inventory_insights(hospital_name: str, inventory: list):
@@ -76,6 +109,10 @@ def _rule_based_inventory_insights(hospital_name: str, inventory: list):
         insights.append("No medicines expiring within the next 30 days.")
 
     insights.append("Tip: Review min_stock based on weekly emergency load and supplier lead time.")
+
+    urgent_restock_needed = any("urgent restock" in i.lower() for i in insights)
+    if urgent_restock_needed:
+        send_sns_alert(hospital_name, insights)
 
     return insights
 
@@ -169,6 +206,10 @@ Inventory JSON:
             for line in text.split("\n")
             if line.strip()
         ]
+
+        urgent_restock_needed = any("urgent restock" in i.lower() for i in insights)
+        if urgent_restock_needed:
+            send_sns_alert(hospital_name, insights)
 
         return jsonify({"insights": insights, "fallback": False}), 200
 

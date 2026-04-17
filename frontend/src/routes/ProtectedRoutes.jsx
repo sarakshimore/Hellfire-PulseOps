@@ -1,17 +1,13 @@
 import { Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
 
 const ProtectedRoutes = ({ children }) => {
   const [user, setUser] = useState(undefined);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-
-    return () => unsubscribe();
+    // Check JWT token validity
+    const token = localStorage.getItem("token");
+    setUser(token ? true : null);
   }, []);
 
   if (user === undefined) {

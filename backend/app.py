@@ -23,7 +23,7 @@ from services.notifications import notify_high_priority_surgery, notify_low_inve
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "https://hellfire-pulseops.vercel.app"]}})
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # ================================
 # AWS RDS (PostgreSQL) Configuration
@@ -45,9 +45,9 @@ db.init_app(app)
 with app.app_context():
     try:
         db.create_all()
-        print("✅ Connected to RDS and verified tables.")
+        print("Connected to RDS and verified tables.")
     except Exception as e:
-        print(f"⚠️  Could not connect to RDS: {e}")
+        print(f"Could not connect to RDS: {e}")
 
 # ================================
 # JWT Auth Decorator
@@ -139,7 +139,14 @@ def get_hospital(current_user):
     if hospital:
         return jsonify({
             "id": hospital.id, "name": hospital.name,
-            "address": hospital.address, "phone": hospital.phone
+            "address": hospital.address, "phone": hospital.phone,
+            "city": hospital.city,
+            "state": hospital.state,
+            "pincode": hospital.pincode,
+            "number_of_beds": hospital.number_of_beds,
+            "icu_beds": hospital.icu_beds,
+            "emergency_beds": hospital.emergency_beds,
+            "operating_rooms": hospital.operating_rooms
         }), 200
     return jsonify({"message": "No hospital found"}), 404
 
@@ -155,7 +162,14 @@ def create_hospital(current_user):
         admin_id=current_user.id,
         name=data.get('name'),
         address=data.get('address'),
-        phone=data.get('phone')
+        phone=data.get('phone'),
+        city=data.get('city'),
+        state=data.get('state'),
+        pincode=data.get('pincode'),
+        number_of_beds=data.get('number_of_beds'),
+        icu_beds=data.get('icu_beds'),
+        emergency_beds=data.get('emergency_beds'),
+        operating_rooms=data.get('operating_rooms')
     )
     db.session.add(hospital)
     db.session.commit()

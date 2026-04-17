@@ -27,7 +27,7 @@ apiClient.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       console.warn("Unauthorized access: Redirecting to login or missing token.");
       localStorage.removeItem('token');
-      // window.location.href = '/login';
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }

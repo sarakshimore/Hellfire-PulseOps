@@ -1,12 +1,5 @@
 import React, { useState } from "react";
-import { auth, db } from "@/firebase";
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-  doc,
-  setDoc,
-} from "firebase/firestore";
+import apiClient from "@/apiClient";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useHospital } from "@/context/HospitalContext";
@@ -63,7 +56,7 @@ export default function HospitalSetup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const user = auth.currentUser;
+    const user = { uid: "temp" }; // user is validated by token on backend
     if (!user) {
       toast.error("You must be logged in to setup hospital");
       return;
@@ -79,25 +72,24 @@ export default function HospitalSetup() {
 
     try {
       // Save hospital document
-      const hospitalRef = await addDoc(collection(db, "hospitals"), {
-        ...formData,
+      const hospitalRes = await apiClient.post('/hospitals', {
+        name: formData.hospital_name,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode,
         number_of_beds: Number(formData.number_of_beds),
         icu_beds: Number(formData.icu_beds),
         emergency_beds: Number(formData.emergency_beds),
-        operating_rooms: Number(formData.operating_rooms),
-
-        admin_uid: user.uid,
-
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        operating_rooms: Number(formData.operating_rooms)
       });
+      const newHospitalId = hospitalRes.data.id;
 
-      // Save surgeons inside subcollection
       for (const surgeon of surgeons) {
-        await addDoc(collection(db, "hospitals", hospitalRef.id, "surgeons"), {
+        await apiClient.post(`/hospitals/${newHospitalId}/surgeons`, {
           name: surgeon.name.trim(),
-          department: surgeon.department.trim(),
-          createdAt: serverTimestamp(),
+          specialization: surgeon.department.trim(),
+          availableDays: []
         });
       }
 
@@ -109,7 +101,15 @@ export default function HospitalSetup() {
       navigate("/dashboard");
     } catch (err) {
       console.error("Setup error:", err);
-      toast.error(err.message || "Failed to setup hospital");
+      
+      // If hospital already exists, just refresh context and go to dashboard
+      if (err.response?.status === 400 && err.response?.data?.message?.includes("already mapped")) {
+        await refreshHospital();
+        navigate("/dashboard");
+        return;
+      }
+
+      toast.error(err.response?.data?.message || err.message || "Failed to setup hospital");
     } finally {
       setLoading(false);
     }

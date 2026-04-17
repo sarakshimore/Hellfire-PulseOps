@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { PlusCircle } from "lucide-react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/firebase";
+import apiClient from "@/apiClient";
 import { toast } from "sonner";
 import { useHospital } from "@/context/HospitalContext";
 
@@ -46,15 +45,13 @@ export default function InventoryForm() {
     }
 
     try {
-      await addDoc(collection(db, "hospitals", hospital.id, "inventory"), {
+      await apiClient.post(`/hospitals/${hospital.id}/inventory`, {
         name: formData.name.trim(),
         category: formData.category,
         stock: Number(formData.stock || 0),
         min_stock: Number(formData.min_stock || 0),
         unit: formData.unit || "units",
         expiry_date: formData.expiry_date || null,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
       });
 
       toast.success("Medicine added to inventory");
